@@ -1,6 +1,7 @@
 const mysql = require('mysql2');
 const { response } = require('express');
 const express = require('express');
+const inputCheck = require('./utils/inputCheck');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
@@ -18,24 +19,33 @@ const db = mysql.createConnection(
     console.log('Connected to the election database.')
 );
 
-// **GET a SINGLE candidate** //
-db.query(`SELECT * FROM candidates WHERE id = 1`, (err, row) => {
-    if (err) {
-        console.log(err);
-    }
-    console.log(row);
+// **GET SINGLE candidate** //
+app.get('/api/candidate/:id', (req, res) => {
+    const sql = `SELECT * FROM candidates WHERE id = ?`;
+    const params = [req.params.id];
+
+    db.query(sql, params, (err, row) => {
+        if (err) {
+            res.status(400).json({ error: err.message });
+            return;
+        }
+        res.json({
+            message: 'success',
+            data: row
+        });
+    });
 });
 
 // **GET ALL candidates** //
-app.get('/api/candidates', (request, response) => {
+app.get('/api/candidates', (req, res) => {
     const sql = `SELECT * FROM candidates`;
 
     db.query(sql, (err, rows) => {
         if (err) {
-            response.status(500).json({ error: err.message });
+            res.status(500).json({ error: err.message });
             return;
         }
-        response.json({
+        res.json({
             message: 'success',
             data: rows
         });
@@ -43,26 +53,46 @@ app.get('/api/candidates', (request, response) => {
 });
 
 // **DELETE candidate** //
-db.query(`DELETE FROM candidates WHERE id = ?`, 1, (err, result) => {
-    if (err) {
-        console.log(err);
-    }
-    console.log(result);
+app.delete('/api/candidate/:id', (req, res) => {
+    const sql = `DELETE FROM candidates WHERE id = ?`;
+    const params = [req.params.id];
+
+    db.query(sql, params, (err, result) => {
+        if (err) {
+            res.statusMessage(400).json({ error: res.message });
+        } else if (!result.affectedRows) {
+            res.json({
+                message: 'Candidate not found'
+            });
+        } else {
+            res.json({
+                message: 'deleted',
+                changes: result.affectedRows,
+                id: req.params.id
+            });
+        }
+    });
 });
 
 // **CREATE candidate** //
-const sql = `INSERT INTO candidates (id, first_name, last_name, industry_connected) 
-                VALUES (?,?,?,?)`;
-const params = [1, 'Ronald', 'Firbank', 1];
+app.post('/api/candidate', ({ body }, res) => {
+    const sql = `INSERT INTO candidates (first_name, last_name, industry_connected)
+    VALUES (?,?,?)`;
+    const params = [body.first_name, body.last_name, body.industry_connected];
 
-db.query(sql, params, (err, result) => {
-    if (err) {
-        console.log(err);
-    }
-    console.log(result);
+    db.query(sql, params, (err, result) => {
+        if (err) {
+            res.status(400).json({ error: err.message });
+            return;
+        }
+        res.json({
+            message: 'success',
+            data: body
+        });
+    });
 });
 
-app.use((request, response) => {
+app.use((req, res) => {
     response.status(404).end();
 });
 
