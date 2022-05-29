@@ -26,8 +26,20 @@ db.query(`SELECT * FROM candidates WHERE id = 1`, (err, row) => {
     console.log(row);
 });
 
-db.query(`SELECT * FROM candidates`, (err, rows) => {
-    console.log(rows);
+// **GET ALL candidates** //
+app.get('/api/candidates', (request, response) => {
+    const sql = `SELECT * FROM candidates`;
+
+    db.query(sql, (err, rows) => {
+        if (err) {
+            response.status(500).json({ error: err.message });
+            return;
+        }
+        response.json({
+            message: 'success',
+            data: rows
+        });
+    });
 });
 
 // **DELETE candidate** //
